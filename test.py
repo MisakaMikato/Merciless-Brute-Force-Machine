@@ -11,18 +11,7 @@ def huawei_brute_force_class_test():
 
 
 def huawei_function_test():
-    devices = [
-        Device(
-            '10.99.183.30',
-            'Huawei-Firewall',
-            'Huawei-Firewall'
-        ),
-        Device(
-            '10.204.62.198',
-            'Huawei-Firewall',
-            'Huawei-Firewall',
-        )
-    ]
+    devices = []
     bf = HuaweiBruteForce(devices)
     bf.invoke()
 
