@@ -1,3 +1,5 @@
+from selenium import webdriver
+
 from filesio import Reader, Writer
 from bruteforce import HuaweiBruteForce, H3CBruteForce, BruteForceInvoke, CiscoBruteForce
 from device import Device
@@ -11,7 +13,9 @@ def huawei_brute_force_class_test():
 
 
 def huawei_function_test():
-    devices = []
+    devices = [
+        Device('10.206.6.147', 'Huawei-Switch', 'Huawei-Switch')
+    ]
     bf = HuaweiBruteForce(devices)
     bf.invoke()
 
@@ -41,5 +45,12 @@ def create_report_test():
     writer.create_excel_report('./data/weak_passwd.bak')
 
 
+class TestPasswd:
+    def test_firewall(self):
+        browser = webdriver.Firefox()
+        browser.get("http://10.204.62.18")
+
+
 if __name__ == "__main__":
-    create_report_test()
+    test_obj = TestPasswd()
+    test_obj.test_firewall()
