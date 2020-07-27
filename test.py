@@ -1,4 +1,4 @@
-from filesio import Reader
+from filesio import Reader, Writer
 from bruteforce import HuaweiBruteForce, H3CBruteForce, BruteForceInvoke, CiscoBruteForce
 from device import Device
 
@@ -47,5 +47,10 @@ def brute_force_invoke_test():
     brute_force_invoke.do('./fileserver/20200710135334-asset.xlsx')
 
 
+def create_report_test():
+    writer = Writer('./data/默认口令设备清单.xlsx')
+    writer.create_excel_report('./data/weak_passwd.bak')
+
+
 if __name__ == "__main__":
-    cisco_brute_force_class_test()
+    create_report_test()
