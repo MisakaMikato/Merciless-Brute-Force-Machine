@@ -8,7 +8,7 @@ from typing import List
 
 from interface import IBruteForce
 from device import Device
-from filesio import Reader
+from filesio import Writer
 from decoder import set_passwd, encode64
 
 
@@ -62,18 +62,13 @@ class BruteForceFacory:
     def __init__(self, format_brand, device_obj_list):
         # TODO 扩展其他品牌的BruteForce类
         self.class_mapper = {
-            'huawei': HuaweiBruteForce,
-            'h3c': H3CBruteForce,
-            'cisco': CiscoBruteForce
+            'huawei': HuaweiBruteForce
         }
         self.format_brand = format_brand
         self.device_obj_list = device_obj_list
 
     def build(self):
-        return self.class_mapper.get(
-            self.format_brand,
-            self.not_support_device
-        )(self.device_obj_list)
+        return self.class_mapper.get(self.format_brand)(self.device_obj_list)
 
     def not_support_device(self, *args):
         return None
@@ -197,13 +192,10 @@ class HuaweiBruteForce(IBruteForce):
                     }
                     # 前端不加密的防火墙
                     if re.search('HUAWEI', server_cookie['SESSIONID']):
-                        result = self.device_USG(server_cookie, username, passwd, sess, device)
+                        return self.device_USG(server_cookie, username, passwd, sess, device)
                     # 前端加密的防火墙
                     else:
-                        result = self.device_SRG20(server_cookie, username, passwd, sess, device)
-
-                    if result is not None:
-                        return result
+                        return self.device_SRG20(server_cookie, username, passwd, sess, device)
             except requests.ConnectTimeout as te:
                 logger.error(f'{device.ip}: {te}')
                 break
@@ -235,13 +227,14 @@ class HuaweiBruteForce(IBruteForce):
                 return f'{username}:{passwd}'
         except requests.ConnectTimeout as te:
             logger.error(f'{device.ip},{device.brand}: {te}')
+        sess.close()
         return None
 
     def device_USG(self, server_cookie, username, passwd, sess, device):
         '''前端不加密密码的防火墙'''
         base_url = 'https://{}:8443/{}'
         post_body = {
-            'spring-security-redirect': '',
+            'spring-security-redirect':'',
             'language': 'zh_CN',
             'password': passwd,
             'username': username,
@@ -256,9 +249,10 @@ class HuaweiBruteForce(IBruteForce):
                 verify=False
             )
             if res.status_code >= 200 and res.status_code < 400:
-                return f'{username}:{passwd}'
-        except requests.ConnectTimeout as te:
+                return f'{username},{passwd}'
+        except requests.ConnectTimeout as  te:
             logger.error(f'{device.ip},{device.brand}: {te}')
+        sess.close()
         return None
 
     def secoway_brute_force(self, device: Device):
@@ -364,7 +358,7 @@ class H3CBruteForce(IBruteForce):
                     timeout=5
                 )
                 if not re.search('error', res.text):
-                    return f'{username}:{passwd}'
+                    return f'{username},{passwd}'
             except requests.ConnectTimeout as te:
                 logger.error(te)
                 break
