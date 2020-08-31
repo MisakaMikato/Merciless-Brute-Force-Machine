@@ -1,5 +1,6 @@
 import time
 import selenium
+import re
 
 from selenium import webdriver
 from selenium.webdriver.support.wait import WebDriverWait
@@ -13,16 +14,16 @@ from device import Device
 
 
 class TestPasswd:
-    def __init__(self):
-        myProxy = "127.0.0.1:7070"
+    def __init__(self, proxy=None):
         self.proxy = Proxy({
             'proxyType': ProxyType.MANUAL,
-            'httpProxy': myProxy,
-            'ftpProxy': myProxy,
-            'sslProxy': myProxy,
+            'httpProxy': proxy,
+            'ftpProxy': proxy,
+            'sslProxy': proxy,
             'noProxy': ''
         })
         self.browser = webdriver.Firefox(proxy=self.proxy)
+        self.browser.set_page_load_timeout(20)
 
     def is_element_exist_by_id(self, element_id):
         '''判断当前页面是否存在某个元素'''
@@ -35,8 +36,9 @@ class TestPasswd:
 
     def test_firewall(self, ip, username, passwd):
         self.browser.get(f"http://{ip}")
-        wait = WebDriverWait(self.browser, 20)
+        wait = WebDriverWait(self.browser, 30)
         username_input = wait.until(ec.presence_of_element_located((By.ID, 'username')))
+        time.sleep(0.3)
         if self.is_element_exist_by_id('hide_pwd'):
             self.browser.find_element_by_id('hide_pwd').click()
             time.sleep(0.3)
@@ -75,6 +77,9 @@ class TestPasswd:
         # action_chains = ActionChains(self.browser)
         try:
             self.browser.get(f'http://{ip}')
+        except selenium.common.exceptions.TimeoutException:
+            print(f'{ip}: 连接超时')
+            return False
         except Exception:
             self.browser.find_element_by_id('enableTls10Button').click()
         username_input = wait.until(ec.presence_of_element_located((By.ID, 'username')))
@@ -133,18 +138,59 @@ def brute_force_invoke_test():
 
 def create_report_test():
     writer = Writer('./data/默认口令设备清单.xlsx')
-    writer.create_excel_report('./data/weak_passwd.bak')
+    writer.create_excel_report('./data/valid-passwd')
 
 
-def passwd_valid_test():
-    with open('./data/weak_passwd.bak', 'r') as f:
+def passwd_valid_test(last_ip=None):
+    pause = last_ip is None
+    with open('./data/weak_passwd', 'r') as f:
         lines = f.readlines()
+    test_obj = TestPasswd("127.0.0.1:7070")
+    out_file = open('./data/valid-passwd', 'w')
     for line in lines:
+        flag = False
         line = line.replace('/n', '')
+        if 'unknown' in line:
+            continue
+        ip = re.findall(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', line)[0]
+        hardware = re.findall(f"{ip},(.*),admin", line)[0]
+        passwd = re.findall(f'{hardware},(.*)', line)[0]
+        if ip == last_ip:
+            pause = True
+        if not pause:
+            continue
+        username, passwd = passwd.split(':')
+        try:
+            if re.findall('Secoway', hardware, re.I):
+                flag = test_obj.test_secoway(ip, username, passwd)
+            elif re.findall('Firewall', line, re.I):
+                flag = test_obj.test_firewall(ip, username, passwd)
+            if flag:
+                msg = f'{ip},{hardware},{username}:{passwd}'
+                out_file.write(msg + '\n')
+                print(msg)
+        except selenium.common.exceptions.TimeoutException:
+            print(f'{ip}: 连接超时')
+        except selenium.common.exceptions.WebDriverException:
+            print(f'{ip}: 连接失败')
+
+
+def unique(in_file_path, out_file_path):
+    '''进行ip去重'''
+    with open(in_file_path, 'r') as f:
+        lines = f.readlines()
+    vis = []
+    writer = Writer(out_file_path, mode='w')
+    for line in lines:
+        line = line.replace('\n', '')
+        ip = re.findall(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', line)
+        if ip not in vis:
+            writer.file_writer(line)
+            vis.append(ip)
 
 
 if __name__ == "__main__":
-    test_obj = TestPasswd()
-    # test_obj.test_firewall('10.99.176.94', 'admin', 'Admin@123')
-    test_obj.browser.get('http://baidu.com')
+    # passwd_valid_test()
+    # unique('./data/valid-passwd', './data/weak_passwd')
     # brute_force_invoke_test()
+    create_report_test()
