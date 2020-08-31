@@ -73,12 +73,19 @@ class Reader:
 
 
 class Writer:
-    def __init__(self, out_file_path):
+    def __init__(self, out_file_path, mode='a+'):
         self.out_file_path = out_file_path
+        self.mode = mode
+        self.f = open(self.out_file_path, mode)
 
-    def file_writer(self, message, mode='a+'):
-        with open(self.out_file_path, mode) as f:
-            f.write(message+'\n')
+    def __del__(self):
+        self.f.close()
+
+    def close(self):
+        self.f.close()
+
+    def file_writer(self, message):
+        self.f.write(message+'\n')
 
     def create_excel_report(self, brute_force_result_path):
         '''根据爆破的结果生成excel报告

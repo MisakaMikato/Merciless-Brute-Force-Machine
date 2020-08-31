@@ -124,7 +124,7 @@ class HuaweiBruteForce(IBruteForce):
                     headers=self.header,
                     timeout=5
                 )
-                if not re.search('ErrorMsg', res.text, re.I) and res.status_code == 200:
+                if not re.search('ErrorMsg', res.text, re.I) and res.status_code < 400:
                     return f'{username}:{passwd}'
             except requests.ConnectTimeout as te:
                 print(te)
